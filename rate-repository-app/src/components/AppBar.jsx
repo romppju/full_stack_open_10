@@ -5,6 +5,7 @@ import theme from '../theme';
 import { useQuery } from '@apollo/client';
 import { GET_USER } from '../graphql/queries';
 import Text from './Text';
+import { useNavigate } from 'react-router-native';
 
 import useAuthStorage from '../hooks/useAuthStorage';
 import { useApolloClient } from '@apollo/client';
@@ -30,14 +31,25 @@ const AppBar = () => {
     return <Text>loading</Text>;
   }
 
-  console.log(user.data.me);
-
   return (
     <View style={styles.container}>
       <ScrollView horizontal centerContent>
         <AppBarTab text="Repositories" to="/" style={styles.tab} />
         {!user.data.me && (
           <AppBarTab text="Sign in" to="/signin" style={styles.tab} />
+        )}
+        {!user.data.me && (
+          <AppBarTab text="Sign up" to="/signup" style={styles.tab} />
+        )}
+        {user.data.me && (
+          <AppBarTab
+            text="Create review"
+            to="/createreview"
+            style={styles.tab}
+          />
+        )}
+        {user.data.me && (
+          <AppBarTab text="My reviews" to="/myreviews" style={styles.tab} />
         )}
         {user.data.me && <SignOut />}
       </ScrollView>
@@ -48,8 +60,10 @@ const AppBar = () => {
 const SignOut = () => {
   const authStorage = useAuthStorage();
   const apolloClient = useApolloClient();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
+    navigate('/');
     await authStorage.removeAccessToken();
     apolloClient.resetStore();
   };

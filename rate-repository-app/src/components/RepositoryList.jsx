@@ -1,94 +1,131 @@
 import { FlatList, View, StyleSheet } from 'react-native';
 import RepositoryItem from './RepositoryItem';
-//import useRepositories from '../hooks/useRepositories';
-import { useQuery } from '@apollo/client';
-import { GET_REPOSITORIES } from '../graphql/queries';
-import Text from './Text';
+import useRepositories from '../hooks/useRepositories';
+import { Picker } from '@react-native-picker/picker';
+import { useState } from 'react';
+import React from 'react';
+import TextInput from './TextInput';
+import theme from '../theme';
+import { useDebounce } from 'use-debounce';
 
 const styles = StyleSheet.create({
   separator: {
     height: 10,
   },
+  validTextInput: {
+    color: theme.colors.textSecondary,
+    backgroundColor: theme.backgroungColors.white,
+    borderColor: theme.backgroungColors.grey,
+    borderWidth: 1,
+    borderRadius: 3,
+    margin: 5,
+    height: 50,
+    paddingLeft: 5,
+  },
+  invalidTextInput: {
+    color: theme.colors.textSecondary,
+    backgroundColor: theme.backgroungColors.white,
+    borderColor: theme.colors.error,
+    borderWidth: 1,
+    borderRadius: 3,
+    margin: 5,
+    height: 50,
+    paddingLeft: 5,
+  },
 });
-
-/*
-const repositories = [
-  {
-    id: 'jaredpalmer.formik',
-    fullName: 'jaredpalmer/formik',
-    description: 'Build forms in React, without the tears',
-    language: 'TypeScript',
-    forksCount: 1589,
-    stargazersCount: 21553,
-    ratingAverage: 88,
-    reviewCount: 4,
-    ownerAvatarUrl: 'https://avatars2.githubusercontent.com/u/4060187?v=4',
-  },
-  {
-    id: 'rails.rails',
-    fullName: 'rails/rails',
-    description: 'Ruby on Rails',
-    language: 'Ruby',
-    forksCount: 18349,
-    stargazersCount: 45377,
-    ratingAverage: 100,
-    reviewCount: 2,
-    ownerAvatarUrl: 'https://avatars1.githubusercontent.com/u/4223?v=4',
-  },
-  {
-    id: 'django.django',
-    fullName: 'django/django',
-    description: 'The Web framework for perfectionists with deadlines.',
-    language: 'Python',
-    forksCount: 21015,
-    stargazersCount: 48496,
-    ratingAverage: 73,
-    reviewCount: 5,
-    ownerAvatarUrl: 'https://avatars2.githubusercontent.com/u/27804?v=4',
-  },
-  {
-    id: 'reduxjs.redux',
-    fullName: 'reduxjs/redux',
-    description: 'Predictable state container for JavaScript apps',
-    language: 'TypeScript',
-    forksCount: 13902,
-    stargazersCount: 52869,
-    ratingAverage: 0,
-    reviewCount: 0,
-    ownerAvatarUrl: 'https://avatars3.githubusercontent.com/u/13142323?v=4',
-  },
-];
-*/
 
 const ItemSeparator = () => <View style={styles.separator} />;
 
 const RepositoryList = () => {
-  /*
-  const { repositories } = useRepositories();
+  const [order, setOrder] = useState('Latest');
+  const [filter, setFilter] = useState('');
+  const [delayedFilter] = useDebounce(filter, 500);
+
+  let queryObj = {};
+
+  order === 'Highest'
+    ? (queryObj = { orderBy: 'RATING_AVERAGE', orderDirection: 'DESC' })
+    : order === 'Lowest'
+    ? (queryObj = { orderBy: 'RATING_AVERAGE', orderDirection: 'ASC' })
+    : (queryObj = { orderBy: 'CREATED_AT', orderDirection: 'DESC' });
+
+  queryObj.searchKeyword = delayedFilter;
+
+  const { repositories } = useRepositories(queryObj);
 
   const repositoryNodes = repositories
     ? repositories.edges.map((edge) => edge.node)
     : [];
-  */
-  const result = useQuery(GET_REPOSITORIES, {
-    fetchPolicy: 'cache-and-network',
-  });
 
-  if (result.loading) {
-    return <Text>loading</Text>;
-  }
+  return (
+    <RepositoryListContainer
+      repositoryNodes={repositoryNodes}
+      order={order}
+      setOrder={setOrder}
+      filter={filter}
+      setFilter={setFilter}
+    />
+  );
+};
 
-  const repositoryNodes = result.data
-    ? result.data.repositories.edges.map((edge) => edge.node)
-    : [];
-
+/*
+export const RepositoryListContainer = ({
+  repositoryNodes,
+  order,
+  setOrder,
+}) => {
   return (
     <FlatList
       data={repositoryNodes}
       ItemSeparatorComponent={ItemSeparator}
-      renderItem={({ item }) => <RepositoryItem repo={item} />}
+      renderItem={({ item }) => <RepositoryItem repo={item} show={false} />}
+      ListHeaderComponent={() => (
+        <Picker
+          selectedValue={order}
+          onValueChange={(value) => setOrder(value)}
+        >
+          <Picker.Item label="Latest Repositories" value="Latest" />
+          <Picker.Item label="Highest rated repositories" value="Highest" />
+          <Picker.Item label="Lowest rated repositories" value="Lowest" />
+        </Picker>
+      )}
     />
   );
 };
+*/
+
+export class RepositoryListContainer extends React.Component {
+  renderHeader = () => {
+    return (
+      <View>
+        <TextInput
+          placeholder="Search"
+          style={styles}
+          defaultValue={this.props.filter}
+          onChangeText={(value) => this.props.setFilter(value)}
+        ></TextInput>
+        <Picker
+          selectedValue={this.props.order}
+          onValueChange={(value) => this.props.setOrder(value)}
+        >
+          <Picker.Item label="Latest Repositories" value="Latest" />
+          <Picker.Item label="Highest rated repositories" value="Highest" />
+          <Picker.Item label="Lowest rated repositories" value="Lowest" />
+        </Picker>
+      </View>
+    );
+  };
+
+  render() {
+    return (
+      <FlatList
+        data={this.props.repositoryNodes}
+        ItemSeparatorComponent={ItemSeparator}
+        renderItem={({ item }) => <RepositoryItem repo={item} show={false} />}
+        ListHeaderComponent={this.renderHeader}
+      />
+    );
+  }
+}
 
 export default RepositoryList;
